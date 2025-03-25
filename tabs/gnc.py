@@ -110,7 +110,7 @@ def calculate_statistics(df):
 
 def analyze_data_with_ai(df, question):
     """Use OpenAI to analyze the data based on the user's question"""
-    # Load API key from .env file
+    # Load API key from .env file or environment variable
     try:
         with open(env_path, 'r') as f:
             env_contents = f.read().strip()
@@ -122,10 +122,9 @@ def analyze_data_with_ai(df, question):
         return "Error: No se encontró la clave API de OpenAI. Por favor, configure la variable de entorno OPENAI_API_KEY."
     
     try:
-        # Initialize the client with explicit API key
-        client = OpenAI(
-            api_key=api_key
-        )
+        # Initialize the client with only the API key
+        os.environ["OPENAI_API_KEY"] = api_key
+        client = OpenAI()
         
         # Calculate statistics
         stats = calculate_statistics(df)
