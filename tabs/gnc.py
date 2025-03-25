@@ -4,6 +4,10 @@ from openai import OpenAI
 import json
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def format_argentine_number(x):
     """Format number in Argentine style (comma as decimal, period as thousands)"""
