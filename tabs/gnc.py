@@ -5,9 +5,11 @@ import json
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
-# Load environment variables from .env file
-load_dotenv()
+# Get the absolute path to the .env file
+env_path = Path(os.getcwd()) / '.env'
+load_dotenv(dotenv_path=env_path, override=True)  # Force override any existing env vars
 
 def format_argentine_number(x):
     """Format number in Argentine style (comma as decimal, period as thousands)"""
@@ -108,39 +110,41 @@ def calculate_statistics(df):
 
 def analyze_data_with_ai(df, question):
     """Use OpenAI to analyze the data based on the user's question"""
-    api_key = os.getenv('OPENAI_API_KEY')
+    # Load API key from .env file
+    try:
+        with open(env_path, 'r') as f:
+            env_contents = f.read().strip()
+            api_key = env_contents.split('=')[1].strip()
+    except Exception as e:
+        api_key = os.getenv('OPENAI_API_KEY', '').strip()
+    
     if not api_key:
         return "Error: No se encontró la clave API de OpenAI. Por favor, configure la variable de entorno OPENAI_API_KEY."
     
     try:
-        # Set the API key directly in the environment
-        os.environ["OPENAI_API_KEY"] = api_key
-        client = OpenAI()
-    except Exception as e:
-        try:
-            # Fallback: try initializing without any arguments
-            client = OpenAI()
-        except Exception as e2:
-            return f"Error al inicializar el cliente de OpenAI: {str(e2)}"
-    
-    # Calculate statistics
-    stats = calculate_statistics(df)
-    
-    # Get dataframe info with serializable data
-    df_info = {
-        "columns": list(df.columns),
-        "dtypes": {col: str(df[col].dtype) for col in df.columns},
-        "sample_data": prepare_sample_data(df),
-        "total_rows": len(df),
-        "date_range": {
-            "start": df['Fecha'].min().strftime('%Y-%m-%d'),
-            "end": df['Fecha'].max().strftime('%Y-%m-%d')
-        },
-        "statistics": stats
-    }
-    
-    # Create the system message with context about the data
-    system_message = f"""You are a data analyst expert in analyzing GNC (compressed natural gas) dispatch data.
+        # Initialize the client with explicit API key
+        client = OpenAI(
+            api_key=api_key
+        )
+        
+        # Calculate statistics
+        stats = calculate_statistics(df)
+        
+        # Get dataframe info with serializable data
+        df_info = {
+            "columns": list(df.columns),
+            "dtypes": {col: str(df[col].dtype) for col in df.columns},
+            "sample_data": prepare_sample_data(df),
+            "total_rows": len(df),
+            "date_range": {
+                "start": df['Fecha'].min().strftime('%Y-%m-%d'),
+                "end": df['Fecha'].max().strftime('%Y-%m-%d')
+            },
+            "statistics": stats
+        }
+        
+        # Create the system message with context about the data
+        system_message = f"""You are a data analyst expert in analyzing GNC (compressed natural gas) dispatch data.
 The data contains the following columns: {', '.join(df_info['columns'])}
 Date range: from {df_info['date_range']['start']} to {df_info['date_range']['end']}
 
@@ -161,14 +165,13 @@ If calculations are needed, use the provided statistics.
 If relevant, include total amounts in Argentine Peso format ($ with comma for decimals and period for thousands).
 """
 
-    # Create the conversation
-    messages = [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": question}
-    ]
+        # Create the conversation
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": question}
+        ]
 
-    # Get the response from OpenAI
-    try:
+        # Get the response from OpenAI
         response = client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=messages,
