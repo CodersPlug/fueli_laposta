@@ -109,9 +109,15 @@ def analyze_data_with_ai(df, question):
         return "Error: No se encontró la clave API de OpenAI. Por favor, configure la variable de entorno OPENAI_API_KEY."
     
     try:
-        client = OpenAI()  # The API key will be automatically read from the environment variable
+        # Set the API key directly in the environment
+        os.environ["OPENAI_API_KEY"] = api_key
+        client = OpenAI()
     except Exception as e:
-        return f"Error al inicializar el cliente de OpenAI: {str(e)}"
+        try:
+            # Fallback: try initializing without any arguments
+            client = OpenAI()
+        except Exception as e2:
+            return f"Error al inicializar el cliente de OpenAI: {str(e2)}"
     
     # Calculate statistics
     stats = calculate_statistics(df)
