@@ -1,0 +1,12 @@
+{
+  "name": "petrol",
+  "version": "1.0.0",
+  "description": "GNC Dispatch Analysis Dashboard",
+  "scripts": {
+    "build": "pip install -r requirements.txt",
+    "start": "streamlit run app.py"
+  },
+  "dependencies": {
+    "streamlit": "1.32.0"
+  }
+} 
