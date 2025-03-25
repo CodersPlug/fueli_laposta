@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import openai
+from openai import OpenAI
 import json
 from datetime import datetime
 import os
@@ -122,8 +122,10 @@ def analyze_data_with_ai(df, question):
         return "Error: No se encontró la clave API de OpenAI. Por favor, configure la variable de entorno OPENAI_API_KEY."
     
     try:
-        # Set the API key
-        openai.api_key = api_key
+        # Initialize the client with explicit API key
+        client = OpenAI(
+            api_key=api_key
+        )
         
         # Calculate statistics
         stats = calculate_statistics(df)
@@ -169,13 +171,13 @@ If relevant, include total amounts in Argentine Peso format ($ with comma for de
             {"role": "user", "content": question}
         ]
 
-        # Get the response from OpenAI using the older API
-        response = openai.ChatCompletion.create(
+        # Get the response from OpenAI
+        response = client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=messages,
             temperature=0
         )
-        return response.choices[0].message['content']
+        return response.choices[0].message.content
     except Exception as e:
         return f"Error al analizar los datos: {str(e)}"
 
