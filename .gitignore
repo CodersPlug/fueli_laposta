@@ -20,7 +20,6 @@ build/
 *.swo
 
 # Project specific
-gnc.csv
 sshkey*
 .env*
 

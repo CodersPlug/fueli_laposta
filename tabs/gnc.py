@@ -167,8 +167,8 @@ If relevant, include total amounts in Argentine Peso format ($ with comma for de
 
 def render():   
     try:
-        # Read the CSV file
-        df = pd.read_csv('gnc.csv')
+        # Read the CSV file from the data directory
+        df = pd.read_csv('data/gnc.csv')
         
         # Convert Fecha to datetime with dayfirst=True for DD/MM/YYYY format
         df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True)
