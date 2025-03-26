@@ -181,63 +181,130 @@ If relevant, include total amounts in Argentine Peso format ($ with comma for de
     except Exception as e:
         return f"Error al analizar los datos: {str(e)}"
 
-def render_gnc_tab():
-    st.title("Análisis de Despachos GNC")
-    
-    # File uploader
-    uploaded_file = st.file_uploader("Cargar archivo CSV de despachos GNC", type=['csv'])
-    
-    if uploaded_file is not None:
-        try:
-            # Read the CSV file
-            df = pd.read_csv(uploaded_file)
+def render():
+    try:
+        # Read the CSV file from the data directory
+        df = pd.read_csv('data/gnc.csv')
+        
+        # Convert Fecha to datetime with dayfirst=True for DD/MM/YYYY format
+        df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True)
+        
+        # Convert Importe to numeric, removing currency symbols and thousands separators
+        df['Importe'] = pd.to_numeric(df['Importe'].str.replace('[\$,]', '', regex=True), errors='coerce')
+        
+        # Add filters
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Date range filter
+            min_date = df['Fecha'].min()
+            max_date = df['Fecha'].max()
+            date_range = st.date_input(
+                "Período",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date
+            )
             
-            # Convert date columns to datetime
-            date_columns = ['Fecha', 'Fecha y hora']
-            for col in date_columns:
-                if col in df.columns:
-                    df[col] = pd.to_datetime(df[col])
-            
-            # Display the dataframe
-            st.subheader("Datos de Despachos")
-            st.dataframe(df)
-            
-            # Questions section
-            st.subheader("Análisis con IA")
-            st.write("Haz preguntas sobre los datos y obtén análisis detallados.")
-            
-            # Example questions
-            example_questions = [
-                "¿Cuál es el promedio de ventas por día?",
-                "¿En qué horario hay más despachos?",
-                "¿Cuál es el surtidor más utilizado?",
-                "¿Cuál es el importe total de ventas?",
-                "¿Cuál es el volumen total despachado?",
-                "¿Cuál es el promedio de importe por despacho?",
-                "¿En qué días de la semana se vende más?",
-                "¿Cuál es el horario con mayor volumen de despachos?",
-                "¿Cuál es el surtidor con mayor volumen de despachos?",
-                "¿Cuál es el surtidor con mayor importe de ventas?"
-            ]
-            
-            # Display example questions as buttons
-            st.write("Preguntas de ejemplo:")
-            cols = st.columns(2)
-            for i, question in enumerate(example_questions):
-                with cols[i % 2]:
-                    if st.button(question):
-                        with st.spinner("Analizando datos..."):
-                            answer = analyze_data_with_ai(df, question)
-                            st.write(answer)
-            
-            # Custom question input
-            custom_question = st.text_input("O haz tu propia pregunta:")
-            if custom_question:
-                with st.spinner("Analizando datos..."):
-                    answer = analyze_data_with_ai(df, custom_question)
-                    st.write(answer)
-            
-        except Exception as e:
-            st.error(f"Error al cargar el archivo: {str(e)}")
-    else:
-        st.info("Por favor, carga un archivo CSV para comenzar el análisis.") 
+        with col2:
+            # Surtidor filter
+            surtidores = sorted(df['Surtidor'].unique())
+            surtidor_selected = st.multiselect(
+                "Surtidor",
+                options=surtidores,
+                default=surtidores
+            )
+        
+        # Apply filters
+        if len(date_range) == 2:
+            mask = (df['Fecha'].dt.date >= date_range[0]) & (df['Fecha'].dt.date <= date_range[1])
+            df = df[mask]
+        
+        if surtidor_selected:
+            df = df[df['Surtidor'].isin(surtidor_selected)]
+
+        # Add AI Analysis section
+        st.write("### Análisis de Datos")
+        st.write("Hacé preguntas sobre los datos y obtené respuestas detalladas:")
+        
+        # Add example questions
+        st.caption("Ejemplos de preguntas:")
+        st.caption("- ¿Cuál es el promedio de ventas por día?")
+        st.caption("- ¿Cuál es el surtidor que más despachos realizó?")
+        st.caption("- ¿Cuál es el horario con mayor actividad?")
+        st.caption("- ¿Cuál fue el día con mayor facturación?")
+        st.caption("- ¿Cuál es el volumen promedio por despacho?")
+        
+        # Add text input for questions
+        user_question = st.text_input("Tu pregunta:", placeholder="Escribí tu pregunta aquí...")
+        
+        if user_question:
+            with st.spinner('Analizando los datos...'):
+                answer = analyze_data_with_ai(df, user_question)
+                st.write("#### Respuesta:")
+                st.write(answer)
+                st.divider()
+
+        # Create a copy of the DataFrame for display
+        display_df = df.copy()
+        
+        # Select columns to display (excluding 'Cliente' and 'Producto')
+        columns_to_display = [col for col in display_df.columns if col not in ['Cliente', 'Producto']]
+        display_df = display_df[columns_to_display]
+        
+        # Format the Fecha column to show only the date
+        if 'Fecha' in display_df.columns:
+            display_df['Fecha'] = display_df['Fecha'].dt.strftime('%d/%m/%Y')
+        
+        # Format numeric columns
+        if 'Volumen' in display_df.columns:
+            display_df['Volumen'] = display_df['Volumen'].apply(format_argentine_number)
+        
+        if 'Importe' in display_df.columns:
+            display_df['Importe'] = display_df['Importe'].apply(format_argentine_currency)
+        
+        if 'PPU' in display_df.columns:
+            display_df['PPU'] = display_df['PPU'].apply(format_argentine_number)
+        
+        # Display total records
+        st.write(f"Cantidad de registros: {len(df)}")
+        
+        # Add pagination controls
+        col1, col2, col3 = st.columns([1, 2, 1])
+        
+        with col1:
+            page_size = st.selectbox(
+                "Registros por página",
+                options=[10, 25, 50, 100],
+                index=1  # Default to 25
+            )
+        
+        # Calculate pagination
+        total_pages = (len(display_df) + page_size - 1) // page_size
+        current_page = st.session_state.get('current_page', 1)
+        
+        with col2:
+            st.write(f"Página {current_page} de {total_pages}")
+        
+        with col3:
+            if current_page > 1:
+                if st.button("← Anterior"):
+                    st.session_state.current_page = current_page - 1
+            if current_page < total_pages:
+                if st.button("Siguiente →"):
+                    st.session_state.current_page = current_page + 1
+        
+        # Slice the dataframe for the current page
+        start_idx = (current_page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_df = display_df.iloc[start_idx:end_idx]
+        
+        # Display the paginated dataframe
+        st.dataframe(
+            page_df,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+    except Exception as e:
+        st.error(f"Error al cargar el archivo: {str(e)}") 

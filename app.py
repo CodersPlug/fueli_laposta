@@ -1,15 +1,18 @@
 import streamlit as st
-from tabs import liquidos, gnc, taller, tienda
+import tabs.gnc as gnc
+import tabs.liquidos as liquidos
+import tabs.taller as taller
+import tabs.tienda as tienda
 
 # Set page config
 st.set_page_config(
-    page_title="Fueli Petrol",
+    page_title="Fueli La Posta",
     page_icon="⛽",
     layout="wide"
 )
 
 # Add a header
-st.title("Panel de Control")
+st.title("Tablero de Control")
 st.markdown("---")
 
 # Create tabs
