@@ -3,6 +3,7 @@ import tabs.gnc as gnc
 import tabs.liquidos as liquidos
 import tabs.taller as taller
 import tabs.tienda as tienda
+import tabs.proveedores as proveedores
 
 # Set page config
 st.set_page_config(
@@ -16,7 +17,7 @@ st.title("Tablero de Control")
 st.markdown("---")
 
 # Create tabs
-tab1, tab2, tab3, tab4 = st.tabs(["GNC", "Líquidos", "Taller", "Tienda"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["GNC", "Líquidos", "Taller", "Tienda", "Proveedores"])
 
 # Render each tab
 with tab1:
@@ -30,6 +31,9 @@ with tab3:
 
 with tab4:
     tienda.render()
+
+with tab5:
+    proveedores.render()
 
 # Add footer
 st.markdown("---")
